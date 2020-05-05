@@ -31,21 +31,23 @@ public:
     bool loadInfo();
 
     // Character
-    bool newCharacter();    // Sets default character stats
+    void newCharacter();    // Sets default character stats
+    int levelUp();
 
     // Character Info string
     string toString();
 
     // Getters & Setters & modifs
+    // Setters
     // Physique
-    bool setName(string name);
-    bool setGender(Gender gender);
-    bool setRace(string race);
-    bool setClass(string _class);
+    void setName(string name);
+    void setGender(Gender gender);
+    void setRace(string race);
+    void setClass(string _class);
     bool setAge(int age);
     bool setHeight(double height);
     bool setWeight(double weight);
-    bool setHairColor(string color);
+    void setHairColor(string color);
     // Stats
     bool setHP(int hp, bool max = false);
     bool setMP(int mp, bool max = false);
@@ -60,8 +62,8 @@ public:
     bool setAttPts(int pts);
     bool setGlyphPts(int pts);
     // States
-    bool setIsReseting(bool resting);
-    bool setIsDead(bool dead);
+    void setIsReseting(bool resting);
+    void setIsDead(bool dead);
     // Inventory
     bool setGold(int gold);
 
@@ -83,11 +85,11 @@ public:
     bool toggleIsResting();
     bool toggleIsDeath();
     // Inventory
-    bool addItem(Item* item);
-    Item addItem(string name, int value);
-    bool clearInventory();
+    Item* addItem(string name, int value);
+    int clearInventory();
     int modGold(int gold);
 
+    // Getters
     // Physique
     string getName();
     Gender getGender();
@@ -122,8 +124,8 @@ public:
     bool fight();                       // Get:items, gold, xp ; Cost: HP, Mana, STM ; Can die
     bool rest(int gCost, int xpCost);   // Restore stats, lose gold and xp, gain resting bonus
     int sellItems();    // Sell items for gold
-    int buyattPts();    // Upgrade hp,mp,stm,dmg
-    int buyGlyphPts();  // Upgrade glyphs
+    int buyAttPts(int count);    // Upgrade hp,mp,stm,dmg
+    int buyGlyphPts(int count);  // Upgrade glyphs
 
 private:
 

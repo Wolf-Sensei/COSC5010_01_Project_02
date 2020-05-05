@@ -23,9 +23,9 @@ public:
 
     // Getters & Seters
     bool setName(string name);
-    bool setValue(unsigned int value);
+    bool setValue(int value);
     string getName();
-    unsigned int getValue();
+    int getValue();
 
     // Item String
     string toString();
@@ -37,7 +37,7 @@ private:
 
     // Item
     string name;
-    unsigned int value;
+    int value;
 };
 
 #endif // !ITEM_H

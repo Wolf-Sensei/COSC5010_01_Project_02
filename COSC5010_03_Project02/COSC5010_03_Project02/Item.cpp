@@ -26,8 +26,8 @@ Item::Item() {
 }
 // Init constructor, uses the given name and value.
 Item::Item(string name, int value) {
-    this->getName = name;
-    this->value = value;
+    setName(name);
+    setValue(value);
 }
 
 // Getters & Seters
@@ -36,14 +36,15 @@ bool Item::setName(string name) {
     return true;
 }
 // Sets the value of the item. Only accepts non-negative values.
-bool Item::setValue(unsigned int value) {
+bool Item::setValue(int value) {
+    if (value < 0) return value;
     this->value = value;
     return true;
 }
 string Item::getName() {
     return name;
 }
-unsigned int Item::getValue() {
+int Item::getValue() {
     return value;
 }
 

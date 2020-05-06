@@ -12,29 +12,44 @@
 
 #include <string>
 #include <vector>
-
 #include "Item.h"
 
 using std::string;
 using std::vector;
 
-enum struct Gender {male, female};
+enum struct Gender {MALE, FEMALE};
+enum struct DMGType {MAGIC, PHYSICAL};
 
 class CharacterInfo {
     // === Functions === 
 public:
     // Constructors
-    CharacterInfo(); // Default Constructor
+    CharacterInfo(string filename, bool load = true); // Default Constructor
 
     // Save & Load Info
     bool saveInfo();
     bool loadInfo();
 
-    // Character
+    // Character Events
     void newCharacter();    // Sets default character stats
-    int levelUp();
+    void newCharacter(string name, Gender gender, string race, string _class, DMGType dmgType,
+        int age, double height, double weight, string hairColor,
+        int attHP, int attMP, int attSTM, double attDMG, double glyCC, double glyCM,
+        int level, int gold);
+    int levelUp();          // Leveup character, gain at/gl pts, inc level, reset xp, inc max xp
 
+    // Character Actions
+    bool fight(CharacterInfo enemy, DMGType type);        // Get:items, gold, xp ; Cost: HP, Mana, STM ; Can die
+    bool rest(int gCost); // Restore lost stats, lose gold, gain resting bonus
+    int sellItems();                        // Sell items for gold
+
+    // Character Utility
+    bool buyAttPts(int gCost);      // Upgrade hp,mp,stm,dmg
+    bool spendAttPt(int att);       // Increase max HP, MP, STM, or DMG
+
+    // Utility
     // Character Info string
+    void updateStats();
     string toString();
 
     // Getters & Setters & modifs
@@ -44,6 +59,7 @@ public:
     void setGender(Gender gender);
     void setRace(string race);
     void setClass(string _class);
+    void setDmgType(DMGType type);
     bool setAge(int age);
     bool setHeight(double height);
     bool setWeight(double weight);
@@ -52,17 +68,13 @@ public:
     bool setHP(int hp, bool max = false);
     bool setMP(int mp, bool max = false);
     bool setSTM(int stm, bool max = false);
-    bool setDMG(double dmg);
-    bool setCritC(float critC);
-    bool setCritM(float critM);
-    bool setGlyph(int glyph, double multiplier);
+    bool setDMG(int dmg);
+    bool setAttribute(int att, int addition);
     // Growth
     bool setLevel(int level);
-    bool setXP(double xp, bool max = false);
+    bool setXP(int xp, bool max = false);
     bool setAttPts(int pts);
-    bool setGlyphPts(int pts);
     // States
-    void setIsReseting(bool resting);
     void setIsDead(bool dead);
     // Inventory
     bool setGold(int gold);
@@ -72,60 +84,44 @@ public:
     int modHP(int hp, bool max = false);
     int modMP(int mp, bool max = false);
     int modSTM(int stm, bool max = false);
-    double modDMG(int dmg);
-    float modCritC(float critC);
-    float modCritM(float cirtM);
-    double modGlyph(int glyph, double multiplier);
+    int modDMG(int dmg);
+    int modAttribute(int att, int amount);
     // Growth
     int modLevel(int level);
-    double modXP(double xp, bool max = false);
+    int modXP(int xp, bool max = false);
     int modAttPts(int pts);
-    int modGlyphPts(int pts);
-    // States
-    bool toggleIsResting();
-    bool toggleIsDeath();
     // Inventory
-    Item* addItem(string name, int value);
+    void addItem(int value);
     int clearInventory();
     int modGold(int gold);
 
     // Getters
     // Physique
-    string getName();
-    Gender getGender();
-    string getRace();
-    string getClass();
-    int getAge();
-    double getHeight();
-    double getWeight();
-    string getHairColor();
+    string getName() { return name; }
+    Gender getGender() { return gender; }
+    string getRace() { return race; }
+    string getClass() { return _class; }
+    DMGType getDMGType() { return dmgType; }
+    int getAge() { return age; }
+    double getHeight() { return height; }
+    double getWeight() { return weight; }
+    string getHairColor() { return hairColor; }
     // Stats
     int getHP(bool max = false);
     int getMP(bool max = false);
     int getSTM(bool max = false);
-    double getDMG();
-    float getCritC();
-    float getCritM();
-    double* getGlyphs();
+    int getDMG() { return DMG; }
+    int* getAttributes() { return attributes; }
     // Growth
-    int getLevel();
+    int getLevel() { return level; }
     int getXP(bool max = false);
-    int getAttPts();
-    int getGlyphPts();
+    int getAttPts() { return attributePts; }
     // States
-    bool isResting();
-    bool isDead();
+    bool isDead() { return dead; }
     // Inventory
-    vector<Item> getInventory();
-    int getItemCount();
-    int getGold();
-
-    // Actions
-    bool fight();                       // Get:items, gold, xp ; Cost: HP, Mana, STM ; Can die
-    bool rest(int gCost, int xpCost);   // Restore stats, lose gold and xp, gain resting bonus
-    int sellItems();    // Sell items for gold
-    int buyAttPts(int count);    // Upgrade hp,mp,stm,dmg
-    int buyGlyphPts(int count);  // Upgrade glyphs
+    vector<Item> getInventory() { return inventory; }
+    int getItemCount() { return inventory.size(); }
+    int getGold() { return gold; }
 
 private:
 
@@ -140,6 +136,7 @@ private:
     Gender gender;
     string race;
     string _class;
+    DMGType dmgType;
     int age;
     double height;
     double weight;
@@ -149,19 +146,15 @@ private:
     int maxHP, HP;      // Health
     int maxMP, MP;      // Mana
     int maxSTM, STM;    // Stamina
-    double DMG;         // Damage
-    float critC;        // Crit Chance
-    float critM;        // Dmg multipler if character crits
-    double glyphs[6];   // Multipliers for hp, mp, stm, dmg, critC, critM
+    int DMG;         // Damage
+    int attributes[4];  // Addition attributes for HP, MP, STM, and dmg
 
     // Growth
     int level;          // Level
-    double maxXP, XP;   // Experience needed to gain level
+    int maxXP, XP;   // Experience needed to gain level
     int attributePts;   // Increase max hp, mp, stm, dmg
-    int glyphPts;       // Modify glyph multipliers
 
     // States
-    bool resting;       // Whether the character is rested and gains a bonus
     bool dead;          // Whether the character is dead or not
 
     // Inventory

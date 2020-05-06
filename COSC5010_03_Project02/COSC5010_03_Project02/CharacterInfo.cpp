@@ -7,47 +7,89 @@
 @Description: Implimentation for the CharacterInfo class object
 */
 
-#include <math.h>   // pow
+#include <cmath>   // pow
+#include <cstdlib> // srand, rand
+#include <ctime>   // time
+#include <string>
+#include <sstream>
 #include "CharacterInfo.h"
 
+using std::pow;
+using std::srand;
+using std::rand;
+using std::time;
+using std::stringstream;
+
+// =========================
 // === Constructors ===
-CharacterInfo::CharacterInfo() {
-    // Attempting to load info if any
-    // If not creates a new character with default values
-    if (!loadInfo()) { newCharacter(); }
+// =========================
+
+CharacterInfo::CharacterInfo(string filename, bool load) {
+    // Init
+    this->filename = filename;
+
+    // Checking if loading info
+    if (load) {
+        // Attempting to load info if any
+        // If not creates a new character with default values
+        if (!loadInfo()) { newCharacter(); }
+    }
+    else {
+        // Creating new character
+        newCharacter();
+    }
 }
 
+// =========================
 // === Save & Load ===
+// =========================
 bool CharacterInfo::saveInfo() { return false; }
 bool CharacterInfo::loadInfo() { return false; }
 
-// === Character ===
+// === Character Events ===
 // Creates a new character and sets default values
 void CharacterInfo::newCharacter() {
+    newCharacter("Mioriya Wolf", Gender::FEMALE, "Elf", "Mage", DMGType::MAGIC,
+        112,    // (~22 Human years)
+        165,    // cm (~5.4ft)
+        45,     // kg (100 lb)
+        "Light Blue",
+        8,  // 80 max HP
+        20, // 200 max MP
+        10, // 100 max STM
+        4,  // 40 DMG
+        1,  // 10% crit chance (.1 per pt)
+        10, // 200% crit multipler (.1 per point)
+        1, 10);
+}
+void CharacterInfo::newCharacter(string name, Gender gender, string race, string _class, DMGType dmgType,
+    int age, double height, double weight, string hairColor,
+    int attHP, int attMP, int attSTM, double attDMG, double glyCC, double glyCM,
+    int level, int gold) {
     // Physique
-    setName("Mioriya Wolf");
-    setGender(Gender::female);
-    setRace("Elf");
-    setClass("Mage");
-    setAge(112);    // (~22 Human years)
-    setHeight(180); // cm (~6ft)
-    setWeight(45);  // kg (100 lb)
-    setHairColor("Light Blue");
+    setName(name);
+    setGender(gender);
+    setRace(race);
+    setClass(_class);
+    setDmgType(dmgType);
+    setAge(age);
+    setHeight(height);
+    setWeight(weight);
+    setHairColor(hairColor);
     // Stats
-    setHP(85, true); setHP(85);
-    setMP(215, true); setMP(215);
-    setSTM(100, true); setSTM(100);
-    setDMG(130);
-    setCritC(0.1f); // 10%
-    setCritM(2);    // 200% (x2 dmg)
-    for (int i = 0; i < 6; i++) setGlyph(i, 1); // 100% (no change)
+    setAttribute(0, attHP); 
+    setAttribute(1, attMP); 
+    setAttribute(2, attSTM); 
+    setAttribute(3, attDMG);
+    updateStats();
+    setHP(attHP * 10);
+    setMP(attMP * 10);
+    setSTM(attSTM * 10);
     // Growth
-    setLevel(1);
-    setXP(100, true); setXP(0); // Need 100 xp to level
+    setLevel(level);
+    setXP(0);
     setAttPts(0);
-    setGlyphPts(0);
     // States
-    setIsReseting(false);
     setIsDead(false);
     // Inventory
     clearInventory();
@@ -58,30 +100,189 @@ void CharacterInfo::newCharacter() {
 // level+1, attPts+5, glyphPts+1, xp->0, maxXP^
 // Returns current level
 int CharacterInfo::levelUp() {
+    // Reset XP
+    modXP(-maxXP);
+    setXP(pow(2, level) * 100, true);    // starting at 100, double needed xp based on level
+
     // Gain pts
     modLevel(1);
     modAttPts(5);
-    modGlyphPts(1);
-
-    // Reset XP
-    setXP(0);
-    setXP(pow(2,level-1)*100, true);    // starting at 100, double needed xp based on level
 
     return level;
 }
 
-// Character info string
-string CharacterInfo::toString() {
-    return "";
+// =========================
+// === Character Actions ===
+// =========================
+
+// Reduce stats and gain rewards based on current level
+// Returns true if the fight was successful, and false otherwise
+bool CharacterInfo::fight(CharacterInfo enemy, DMGType type) {
+    // Init
+    srand(time(NULL));
+    int dmg;
+    int drop = rand() % 100 + 1; // 1-100
+
+    // Checking if enemy or character is dead
+    if (enemy.isDead() || isDead()) return false;
+
+    // === Attacking enemy ===
+    // Calculating dmg to enemy
+    // Comparing damage types
+    if (dmgType == type) dmg = DMG;
+    else dmg = DMG / 2;
+    // Checking stats - cost 10 of respective type
+    if (type == DMGType::PHYSICAL) {
+        if (STM < 10) dmg /= 4;
+        modSTM(-10);
+    }
+    else {  // Magic
+        if (MP < 10) dmg /= 4;
+        modMP(-10);
+    }
+    // Attacking
+    enemy.modHP(-dmg);
+
+    // Checking if enemy is dead
+    if (enemy.isDead()) {
+        // Looting enemy
+        modGold(enemy.getGold());
+        // Chance of item 10%
+        if (drop <= 10) {
+            drop = rand() % 10 + 1;  // 1-10 value
+            addItem(drop);
+        }
+
+        // XP
+        modXP(pow(2, enemy.getLevel() - 1) * 10);   // 2^level * 10 (10 enemies @ current level)
+        return true;
+    }
+
+    // === Getting attacked ===
+    // Calclating dmg
+    // Checking stats (enemy will use it's dmg type, not being optimal)
+    dmg = enemy.getDMG();
+    if (enemy.getDMGType() == DMGType::PHYSICAL) {
+        if (enemy.getSTM() < 10) dmg /= 4;
+        enemy.modSTM(-10);
+    }
+    else {  // Magic
+        if (enemy.getMP() < 10) dmg /= 4;
+        enemy.modMP(-10);
+    }
+    // Attacking
+    modHP(-dmg);
+    return true;
 }
 
+// The character rests at an Inn.
+// The inn costs gold to rest at.
+// Character HP, MP, and STM are fully restored
+// Returns true if resting was successful and false otherwise
+bool CharacterInfo::rest(int gCost) {
+    // Checking if character has enough gold or is dead
+    if (gCost > gold || isDead()) return false;
+
+    // Resting character
+    modGold(-gCost);        // Removing gold
+    setHP(maxHP);           // Restoring HP
+    setMP(maxMP);           // Restoring MP
+    setSTM(maxSTM);         // Restoring STM
+    return true;
+}
+
+// Sells all items in the characters inventory.
+// The value of all the items is put into the characters gold supply
+// Returns the amount of gold gained
+int CharacterInfo::sellItems() {
+    // Init
+    int profit = 0;
+
+    // Selling items
+    for (Item item : inventory) {
+        profit += item.getValue();
+    }
+    inventory.clear();
+    modGold(profit);
+
+    return profit;
+}
+
+// =========================
+// === Character Utility ===
+// =========================
+
+// Buys an attribute pt for the character
+// Returns true if the purchase was successful and false otherwise
+bool CharacterInfo::buyAttPts(int gCost) {
+    // Checking if character has enough gold
+    if (gCost > gold) return false;
+
+    // Purhcasing point
+    modGold(-gCost);    // Removing gold
+    modAttPts(1);       // Adding attribute point
+    return true;
+}
+
+// Increase a character attribute and increase
+// max HP, max MP, Max STM, or DMG
+// Returns true if point allocation was successful and false otherwise
+bool CharacterInfo::spendAttPt(int att) {
+    // Checking if character has attribute points to spend or is dead
+    if (attributePts == 0) return false;
+
+    // Adding attribute point
+    if (!modAttribute(att, 1)) return false;
+    updateStats();
+    modAttPts(-1);
+
+    // Updating stats
+    return true;
+}
+
+// =========================
+// === Utility ===
+// =========================
+
+// Updates stats
+void CharacterInfo::updateStats() {
+    setHP(attributes[0] * 10, true);
+    setMP(attributes[1] * 10, true);
+    setSTM(attributes[2] * 10, true);
+    setDMG(attributes[3] * 10);
+}
+
+// Character info string
+string CharacterInfo::toString() {
+    // Init
+    stringstream ss;
+
+    // Creating string
+    ss << "=== Character Info ===\n"
+        << "Name: " << name << '\n'
+        << ((gender == Gender::MALE) ? "Male" : "Female") << " " << race << " " << _class << '\n'
+        << "Age: " << age << " years | Height: " << height << "cm | Weight: " << weight << "kg | Hair Color: " << hairColor << '\n'
+        << "=== Stats ===\n"
+        << "Status: " << ((dead) ? "Dead" : "Alive") << '\n'
+        << "Level: " << level << " | XP: " << XP << "/" << maxXP << '\n'
+        << "HP: " << HP << "/" << maxHP << " | MP: " << MP << "/" << maxMP << " | STM: " << STM << "/" << maxSTM << " | Damage: " << DMG << '\n'
+        << "Attributes HP: " << attributes[0] << " | MP: " << attributes[1] << " | STM: " << attributes[2] << " | DMG: " << attributes[3] << '\n'
+        << "Gold: " << gold << " | Items: " << inventory.size() << " | Attribute Points: " << attributePts;
+
+    return ss.str();
+}
+
+// =========================
 // === Getters & Setters & Modifs ===
+// =========================
+
 // Setters
 // Physique
 void CharacterInfo::setName(string name) { this->name = name; }
 void CharacterInfo::setGender(Gender gender) { this->gender = gender; }
 void CharacterInfo::setRace(string race) { this->race = race; }
 void CharacterInfo::setClass(string _class) { this->_class = _class; }
+void CharacterInfo::setDmgType(DMGType type) { dmgType = type; }
 bool CharacterInfo::setAge(int age) {
     // Checking if age is negative
     if (age < 0) return false;
@@ -113,7 +314,7 @@ bool CharacterInfo::setHP(int hp, bool max) {
     if (hp < 0) return false;
 
     // Setting HP
-    if (max) maxHP = HP;
+    if (max) maxHP = hp;
     else HP = hp;
 
     // Checking if current HP is over max
@@ -147,7 +348,7 @@ bool CharacterInfo::setSTM(int stm, bool max) {
     if (STM > maxSTM) STM = maxSTM;
     return true;
 }
-bool CharacterInfo::setDMG(double dmg) {
+bool CharacterInfo::setDMG(int dmg) {
     // Checking if dmg is negative
     if (dmg < 0) return false;
 
@@ -155,28 +356,12 @@ bool CharacterInfo::setDMG(double dmg) {
     DMG = dmg;
     return true;
 }
-bool CharacterInfo::setCritC(float critC) {
-    // Checking if crit chance is negative
-    if (critC < 0) return false;
+bool CharacterInfo::setAttribute(int att, int amount) {
+    // Checking if attribute is out of range, and if amount is negative
+    if (att < 0 || att > 3 || amount < 0) return false;
 
-    // Setting crit chance
-    this->critC = critC;
-    return true;
-}
-bool CharacterInfo::setCritM(float critM) {
-    // Checking if crit multiplier is negative
-    if (critM < 0) return false;
-
-    // Setting crit multipler
-    this->critM = critM;
-    return true;
-}
-bool CharacterInfo::setGlyph(int glyph, double multipler) {
-    // Checking if glyph is out of rance, and if multiplier is negative
-    if (glyph < 0 || glyph > 5 || multipler < 0) return false;
-
-    // Setting glyph multipler
-    glyphs[glyph] = multipler;
+    // Setting attribute
+    attributes[att] = amount;
     return true;
 }
 // Growth
@@ -186,9 +371,10 @@ bool CharacterInfo::setLevel(int level) {
 
     // Setting level
     this->level = level;
+    setXP(pow(2, level) * 100, true);
     return true;
 }
-bool CharacterInfo::setXP(double xp, bool max) {
+bool CharacterInfo::setXP(int xp, bool max) {
     // Checking if xp is negative
     if (xp < 0) return false;
 
@@ -208,16 +394,7 @@ bool CharacterInfo::setAttPts(int pts) {
     attributePts = pts;
     return true;
 }
-bool CharacterInfo::setGlyphPts(int pts) {
-    // Checking if glyph pts is negative
-    if (pts < 0) return false;
-
-    // Setting attribute pts
-    glyphPts = pts;
-    return true;
-}
 // States
-void CharacterInfo::setIsReseting(bool resting) { this->resting = resting; }
 void CharacterInfo::setIsDead(bool dead) { this->dead = dead; }
 // Invetory
 bool CharacterInfo::setGold(int gold) {
@@ -282,7 +459,7 @@ int CharacterInfo::modSTM(int stm, bool max) {
     }
     return STM;
 }
-double CharacterInfo::modDMG(int dmg) {
+int CharacterInfo::modDMG(int dmg) {
     // Modifying dmg
     DMG += dmg;
 
@@ -290,32 +467,16 @@ double CharacterInfo::modDMG(int dmg) {
     if (DMG < 0) DMG = 0;
     return DMG;
 }
-float CharacterInfo::modCritC(float critC) {
-    // Modifying crit chance
-    this->critC += critC;
+int CharacterInfo::modAttribute(int att, int amount) {
+    // Checking if attribute is out of range
+    if (att < 0 || att > 3) return false;
 
-    // Checking if crit chance is negative
-    if (this->critC < 0) this->critC = 0;
-    return this->critC;
-}
-float CharacterInfo::modCritM(float critM) {
-    // Modifying crit multiiplier
-    this->critM += critM;
+    // Modifying attribute
+    attributes[att] += amount;
 
-    // Checking if crit multipler is negative
-    if (this->critM < 0) this->critM = 0;
-    return this->critM;
-}
-double CharacterInfo::modGlyph(int glyph, double multipler) {
-    // Checking if glyph is out of range
-    if (glyph < 0 || glyph > 5) return -1;
-
-    // Modifying glyph
-    glyphs[glyph] += multipler;
-
-    // Checking if glyph is negative
-    if (glyphs[glyph] < 0) glyphs[glyph] = 0;
-    return glyphs[glyph];
+    // Checking if attribute is negative
+    if (attributes[att] < 0) attributes[att] = 0;
+    return attributes[att];
 }
 // Growth
 int CharacterInfo::modLevel(int level) {
@@ -326,7 +487,7 @@ int CharacterInfo::modLevel(int level) {
     if (this->level < 1) level = 1;
     return this->level;
 }
-double CharacterInfo::modXP(double xp, bool max) {
+int CharacterInfo::modXP(int xp, bool max) {
     // Modify max xp, ensures that it isn't negative
     if (max) {
         maxXP += xp;
@@ -342,7 +503,7 @@ double CharacterInfo::modXP(double xp, bool max) {
     }
 
     // Checking if character is at maxXP
-    if (XP = maxXP) levelUp();
+    if (XP >= maxXP) levelUp();
     return XP;
 }
 int CharacterInfo::modAttPts(int pts) {
@@ -351,26 +512,10 @@ int CharacterInfo::modAttPts(int pts) {
     if (attributePts < 0) attributePts = 0;
     return attributePts;
 }
-int CharacterInfo::modGlyphPts(int pts) {
-    // Modfying glyph pts, ensures that it isn't negative
-    glyphPts += pts;
-    if (glyphPts < 0) glyphPts = 0;
-    return glyphPts;
-}
-// States
-bool CharacterInfo::toggleIsResting() {
-    resting = !resting;
-    return resting;
-}
-bool CharacterInfo::toggleIsDeath() {
-    dead = !dead;
-    return dead;
-}
 // Inventory
-Item* CharacterInfo::addItem(string name, int value) {
-    Item item(name, value);
+void CharacterInfo::addItem(int value) {
+    Item item(value);
     inventory.push_back(item);
-    return &item;
 }
 int CharacterInfo::clearInventory() {
     int size = inventory.size();
@@ -385,15 +530,6 @@ int CharacterInfo::modGold(int gold) {
 }
 
 // Getters
-// Physique
-string CharacterInfo::getName() { return name; }
-Gender CharacterInfo::getGender() { return gender; }
-string CharacterInfo::getRace() { return race; }
-string CharacterInfo::getClass() { return _class; }
-int CharacterInfo::getAge() { return age; }
-double CharacterInfo::getHeight() { return height; }
-double  CharacterInfo::getWeight() { return weight; }
-string CharacterInfo::getHairColor() { return hairColor; }
 // Stats
 int CharacterInfo::getHP(bool max) {
     if (max) return maxHP;
@@ -407,64 +543,8 @@ int CharacterInfo::getSTM(bool max) {
     if (max) return maxSTM;
     else return STM;
 }
-double CharacterInfo::getDMG() { return DMG; }
-float CharacterInfo::getCritC() { return critC; }
-float CharacterInfo::getCritM() { return critM; }
-double* CharacterInfo::getGlyphs() { return glyphs; }
 // Growth
-int CharacterInfo::getLevel() { return level; }
 int CharacterInfo::getXP(bool max) {
     if (max) return maxXP;
     else return XP;
-}
-int CharacterInfo::getAttPts() { return attributePts; }
-int CharacterInfo::getGlyphPts() { return glyphPts; }
-// States
-bool CharacterInfo::isResting() { return resting; }
-bool CharacterInfo::isDead() { return dead; }
-// Inventory
-vector<Item> CharacterInfo::getInventory() { return inventory; }
-int CharacterInfo::getItemCount() { return inventory.size(); }
-int CharacterInfo::getGold() { return gold; }
-
-// === Actions ===
-bool CharacterInfo::fight() {
-    return true;
-}
-
-bool CharacterInfo::rest(int gCost, int xpCost) {
-    return true;
-}
-
-// Sells all items in the characters inventory.
-// The value of all the items is put into the characters gold supply
-// Returns the amount of gold gained
-int CharacterInfo::sellItems() {
-    // Init
-    int profit = 0;
-
-    // Selling items
-    for (Item item : inventory) {
-        profit += item.getValue();
-    }
-    inventory.clear();
-    modGold(profit);
-
-    return profit;
-}
-
-// Buys an attribute pt for the character
-// Attribute pts cost more for every successive pt
-// Returns the number of attribute pts bought
-// If gold was insufficient, returns -1
-int CharacterInfo::buyAttPts(int count) {
-    return 0;
-}
-
-// Buys a glyph pt for the character
-// Glyph pts cost more for every successive pt
-// Returns the number of glyph pts bought
-// If gold was insufficient, returns -1
-int  CharacterInfo::buyGlyphPts(int count) {
-    return 0;
 }

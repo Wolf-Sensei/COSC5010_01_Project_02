@@ -10,33 +10,18 @@
 #ifndef ITEM_H
 #define ITEM_H
 
-#include <string>
-
-using std::string;
-
 class Item {
     // === Functions ===
 public:
     // Constructors
-    Item();
-    Item(string name, int value);
+    Item(int value);
 
     // Getters & Seters
-    bool setName(string name);
     bool setValue(int value);
-    string getName();
-    int getValue();
-
-    // Item String
-    string toString();
+    int getValue() { return value; }
 
     // === Values ===
 private:
-    // Const
-    static unsigned int ID;
-
-    // Item
-    string name;
     int value;
 };
 

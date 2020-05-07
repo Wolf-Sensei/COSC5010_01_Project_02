@@ -24,7 +24,7 @@ class CharacterInfo {
     // === Functions === 
 public:
     // Constructors
-    CharacterInfo(string filename, bool load = true); // Default Constructor
+    CharacterInfo(string filename); // Default Constructor
 
     // Save & Load Info
     bool saveInfo();
@@ -34,12 +34,11 @@ public:
     void newCharacter();    // Sets default character stats
     void newCharacter(string name, Gender gender, string race, string _class, DMGType dmgType,
         int age, double height, double weight, string hairColor,
-        int attHP, int attMP, int attSTM, double attDMG, double glyCC, double glyCM,
-        int level, int gold);
+        int attHP, int attMP, int attSTM, int attDMG, int level, int gold);
     int levelUp();          // Leveup character, gain at/gl pts, inc level, reset xp, inc max xp
 
     // Character Actions
-    bool fight(CharacterInfo enemy, DMGType type);        // Get:items, gold, xp ; Cost: HP, Mana, STM ; Can die
+    bool fight(CharacterInfo& enemy, DMGType type);        // Get:items, gold, xp ; Cost: HP, Mana, STM ; Can die
     bool rest(int gCost); // Restore lost stats, lose gold, gain resting bonus
     int sellItems();                        // Sell items for gold
 
@@ -124,7 +123,10 @@ public:
     int getGold() { return gold; }
 
 private:
-
+    string getInfo();
+    int getSig(string str);
+    string XOR(string str);
+    
     // === Values ===
 private:
     // === File ===
@@ -146,12 +148,12 @@ private:
     int maxHP, HP;      // Health
     int maxMP, MP;      // Mana
     int maxSTM, STM;    // Stamina
-    int DMG;         // Damage
+    int DMG;            // Damage
     int attributes[4];  // Addition attributes for HP, MP, STM, and dmg
 
     // Growth
     int level;          // Level
-    int maxXP, XP;   // Experience needed to gain level
+    int maxXP, XP;      // Experience needed to gain level
     int attributePts;   // Increase max hp, mp, stm, dmg
 
     // States

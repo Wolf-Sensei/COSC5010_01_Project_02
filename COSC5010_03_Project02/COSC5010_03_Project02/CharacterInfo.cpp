@@ -11,40 +11,199 @@
 #include <cstdlib> // srand, rand
 #include <ctime>   // time
 #include <string>
+#include <iostream>
 #include <sstream>
+#include <fstream>
+#include <functional>
+#include <exception>
 #include "CharacterInfo.h"
 
 using std::pow;
 using std::srand;
 using std::rand;
 using std::time;
+using std::ofstream;
+using std::ifstream;
+using std::getline;
 using std::stringstream;
+using std::hash;
+using std::cout;
+using std::endl;
+using std::exception;
 
 // =========================
 // === Constructors ===
 // =========================
 
-CharacterInfo::CharacterInfo(string filename, bool load) {
+CharacterInfo::CharacterInfo(string filename) {
     // Init
     this->filename = filename;
-
-    // Checking if loading info
-    if (load) {
-        // Attempting to load info if any
-        // If not creates a new character with default values
-        if (!loadInfo()) { newCharacter(); }
-    }
-    else {
-        // Creating new character
-        newCharacter();
-    }
+    newCharacter();
 }
 
 // =========================
 // === Save & Load ===
 // =========================
-bool CharacterInfo::saveInfo() { return false; }
-bool CharacterInfo::loadInfo() { return false; }
+bool CharacterInfo::saveInfo() {
+    // Init
+    hash<string> sigHash;
+    ofstream fileOut;
+
+    // Opening file
+    fileOut.open(filename);
+    if (fileOut.is_open()) {
+        // Putting in info
+        string info = getInfo();
+        fileOut << getSig(info) << endl;
+        fileOut << XOR(info);
+
+        // Closing file
+        fileOut.close();
+    }
+    else return false;
+
+    return true;
+}
+bool CharacterInfo::loadInfo() {
+    // Init
+    hash<string> sigHash;
+    string line;
+    string ssig;
+    int sig;
+    string info;
+    stringstream ss;
+    ifstream fileIn;
+
+    // Opening file
+    fileIn.open(filename);
+    if (fileIn.is_open()) {
+        // Getting info
+        getline(fileIn, ssig);
+        bool tmp = true;
+        while (getline(fileIn, line)) {
+            if (tmp) {
+                ss << line;
+                tmp = false;
+            }
+            else {
+                ss << endl << line;
+            }
+        }
+
+        // Closing file
+        fileIn.close();
+    }
+    else return false;
+    
+    // decrypt
+    info = XOR(ss.str());
+    cout << "=== info ===" << endl;
+    cout << info << endl;
+
+    // Checking if tampered
+    try {
+        sig = stoi(ssig);
+    }
+    catch (exception& e) {
+        return false;
+    }
+    if (sig != getSig(info)) return false;
+
+    // Loading info into character
+    ss.str("");
+    ss << info;
+    getline(ss, name);
+    getline(ss, line);
+    if (line.compare("MALE") == 0) gender = Gender::MALE;
+    else gender = Gender::FEMALE;
+    getline(ss, race);
+    getline(ss, _class);
+    getline(ss, line);
+    if (line.compare("PHYSICAL") == 0) dmgType = DMGType::PHYSICAL;
+    else dmgType = DMGType::MAGIC;
+    getline(ss, line);
+    age = stoi(line);
+    getline(ss, line);
+    height = stod(line);
+    getline(ss, line);
+    weight = stod(line);
+    getline(ss, hairColor);
+    getline(ss, line);
+    maxHP = stoi(line);
+    getline(ss, line);
+    HP = stoi(line);
+    getline(ss, line);
+    maxMP = stoi(line);
+    getline(ss, line);
+    MP = stoi(line);
+    getline(ss, line);
+    maxSTM = stoi(line);
+    getline(ss, line);
+    STM = stoi(line);
+    getline(ss, line);
+    DMG = stoi(line);
+    getline(ss, line);
+    attributes[0] = stoi(line);
+    getline(ss, line);
+    attributes[1] = stoi(line);
+    getline(ss, line);
+    attributes[2] = stoi(line);
+    getline(ss, line);
+    attributes[3] = stoi(line);
+    getline(ss, line);
+    level = stoi(line);
+    getline(ss, line);
+    maxXP = stoi(line);
+    getline(ss, line);
+    XP = stoi(line);
+    getline(ss, line);
+    attributePts = stoi(line);
+    getline(ss, line);
+    dead = stoi(line);
+    getline(ss, line);
+    sig = stoi(line);   // Number of items
+    for (int i = 0; i < sig; i++) {
+        getline(ss, line);
+        addItem(stoi(line));
+    }
+    getline(ss, line);
+    gold = stoi(line);
+
+    return true;
+}
+
+string CharacterInfo::getInfo() {
+    stringstream ss;
+    ss << name << endl
+        << ((gender == Gender::MALE) ? "MALE" : "FEMALE") << endl
+        << race << endl << _class << endl
+        << ((dmgType == DMGType::PHYSICAL) ? "PHYSICAL" : "MAGIC") << endl
+        << age << endl << height << endl << weight << endl << hairColor << endl
+        << maxHP << endl << HP << endl << maxMP << endl << MP << endl << maxSTM << endl << STM << endl << DMG << endl
+        << attributes[0] << endl << attributes[1] << endl << attributes[2] << endl << attributes[3] << endl
+        << level << endl << maxXP << endl << XP << endl << attributePts << endl << dead << endl
+        << inventory.size() << endl;
+    for (Item item : inventory) ss << item.getValue() << endl;
+    ss << gold;
+
+    return ss.str();
+}
+int CharacterInfo::getSig(string str) {
+    // Init
+    hash<string> sighash;
+
+    // Returning sig
+    return sighash(str);
+}
+string CharacterInfo::XOR(string str) {
+    char key[3] = { 'K', 'C', 'Q' };
+    string output = str;
+
+    for (int i = 0; i < str.size(); i++)
+        output[i] = str[i] ^ key[i % (sizeof(key) / sizeof(char))];
+
+    return output;
+}
 
 // === Character Events ===
 // Creates a new character and sets default values
@@ -54,18 +213,16 @@ void CharacterInfo::newCharacter() {
         165,    // cm (~5.4ft)
         45,     // kg (100 lb)
         "Light Blue",
-        8,  // 80 max HP
-        20, // 200 max MP
-        10, // 100 max STM
-        4,  // 40 DMG
-        1,  // 10% crit chance (.1 per pt)
-        10, // 200% crit multipler (.1 per point)
-        1, 10);
+        8,      // 80 max HP
+        20,     // 200 max MP
+        10,     // 100 max STM
+        4,      // 40 DMG
+        1,      // Level
+        10);    // Gold
 }
 void CharacterInfo::newCharacter(string name, Gender gender, string race, string _class, DMGType dmgType,
     int age, double height, double weight, string hairColor,
-    int attHP, int attMP, int attSTM, double attDMG, double glyCC, double glyCM,
-    int level, int gold) {
+    int attHP, int attMP, int attSTM, int attDMG, int level, int gold) {
     // Physique
     setName(name);
     setGender(gender);
@@ -82,9 +239,9 @@ void CharacterInfo::newCharacter(string name, Gender gender, string race, string
     setAttribute(2, attSTM); 
     setAttribute(3, attDMG);
     updateStats();
-    setHP(attHP * 10);
-    setMP(attMP * 10);
-    setSTM(attSTM * 10);
+    setHP(maxHP);
+    setMP(maxMP);
+    setSTM(maxSTM);
     // Growth
     setLevel(level);
     setXP(0);
@@ -93,7 +250,7 @@ void CharacterInfo::newCharacter(string name, Gender gender, string race, string
     setIsDead(false);
     // Inventory
     clearInventory();
-    setGold(10);
+    setGold(gold);
 }
 
 // Levels up the character
@@ -108,6 +265,11 @@ int CharacterInfo::levelUp() {
     modLevel(1);
     modAttPts(5);
 
+    // Restore stats
+    setHP(maxHP);
+    setMP(maxMP);
+    setSTM(maxSTM);
+
     return level;
 }
 
@@ -117,7 +279,7 @@ int CharacterInfo::levelUp() {
 
 // Reduce stats and gain rewards based on current level
 // Returns true if the fight was successful, and false otherwise
-bool CharacterInfo::fight(CharacterInfo enemy, DMGType type) {
+bool CharacterInfo::fight(CharacterInfo& enemy, DMGType type) {
     // Init
     srand(time(NULL));
     int dmg;
@@ -134,11 +296,11 @@ bool CharacterInfo::fight(CharacterInfo enemy, DMGType type) {
     // Checking stats - cost 10 of respective type
     if (type == DMGType::PHYSICAL) {
         if (STM < 10) dmg /= 4;
-        modSTM(-10);
+        modSTM(-20);
     }
     else {  // Magic
         if (MP < 10) dmg /= 4;
-        modMP(-10);
+        modMP(-20);
     }
     // Attacking
     enemy.modHP(-dmg);
@@ -163,11 +325,11 @@ bool CharacterInfo::fight(CharacterInfo enemy, DMGType type) {
     // Checking stats (enemy will use it's dmg type, not being optimal)
     dmg = enemy.getDMG();
     if (enemy.getDMGType() == DMGType::PHYSICAL) {
-        if (enemy.getSTM() < 10) dmg /= 4;
+        if (enemy.getSTM() < 20) dmg /= 4;
         enemy.modSTM(-10);
     }
     else {  // Magic
-        if (enemy.getMP() < 10) dmg /= 4;
+        if (enemy.getMP() < 20) dmg /= 4;
         enemy.modMP(-10);
     }
     // Attacking
@@ -261,6 +423,7 @@ string CharacterInfo::toString() {
     ss << "=== Character Info ===\n"
         << "Name: " << name << '\n'
         << ((gender == Gender::MALE) ? "Male" : "Female") << " " << race << " " << _class << '\n'
+        << "Damage type: " << ((dmgType == DMGType::PHYSICAL) ? "Physical" : "Magic") << '\n'
         << "Age: " << age << " years | Height: " << height << "cm | Weight: " << weight << "kg | Hair Color: " << hairColor << '\n'
         << "=== Stats ===\n"
         << "Status: " << ((dead) ? "Dead" : "Alive") << '\n'
@@ -362,6 +525,7 @@ bool CharacterInfo::setAttribute(int att, int amount) {
 
     // Setting attribute
     attributes[att] = amount;
+    updateStats();
     return true;
 }
 // Growth
@@ -371,7 +535,7 @@ bool CharacterInfo::setLevel(int level) {
 
     // Setting level
     this->level = level;
-    setXP(pow(2, level) * 100, true);
+    setXP(pow(2, level-1) * 100, true);
     return true;
 }
 bool CharacterInfo::setXP(int xp, bool max) {
@@ -476,6 +640,7 @@ int CharacterInfo::modAttribute(int att, int amount) {
 
     // Checking if attribute is negative
     if (attributes[att] < 0) attributes[att] = 0;
+    updateStats();
     return attributes[att];
 }
 // Growth

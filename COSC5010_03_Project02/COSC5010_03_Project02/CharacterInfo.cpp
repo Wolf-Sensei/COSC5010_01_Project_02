@@ -5,36 +5,39 @@
 @Assignment: Project 02 | Option 1
 @Due: May 12, 2020
 @Description: Implimentation for the CharacterInfo class object
+Impliments setters and modifs for character stats
+Modifs modify the value by a set amount.
+Is able to initalize a new character
+Impliments varius character actions such as fighting and resting.
+Impliments save and load functionallity
+Impliments signature and encryption/decrytipon for character data
 */
 
-#include <cmath>   // pow
-#include <cstdlib> // srand, rand
-#include <ctime>   // time
-#include <string>
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <functional>
-#include <exception>
+#include <cmath>        // pow, rand, srand
+#include <ctime>        // time
+#include <exception>    // exception, hash
+#include <fstream>      // endl, ifstream, ofstream
+#include <sstream>      // getline, stringstream
 #include "CharacterInfo.h"
 
 using std::pow;
-using std::srand;
 using std::rand;
+using std::srand;
 using std::time;
-using std::ofstream;
-using std::ifstream;
-using std::getline;
-using std::stringstream;
-using std::hash;
-using std::cout;
 using std::endl;
+using std::getline;
 using std::exception;
+using std::hash;
+using std::ifstream;
+using std::ofstream;
+using std::stringstream;
 
 // =========================
 // === Constructors ===
 // =========================
 
+// Constructor takes in a filename for where character information is saved and loaded from
+// Also initalizes the character
 CharacterInfo::CharacterInfo(string filename) {
     // Init
     this->filename = filename;
@@ -44,74 +47,100 @@ CharacterInfo::CharacterInfo(string filename) {
 // =========================
 // === Save & Load ===
 // =========================
+
+// Save character information into a file
+// Gathers character information and creates a hash-signature of it
+// Encrypts the character information
+// Signature and encrypted information are put into the file
+// Signature is used to ensure that the data cannot be tampered with
+// Encryption is used to hide character information in file
+// Returns true if the information was successfully saved and false otherwise
 bool CharacterInfo::saveInfo() {
     // Init
-    hash<string> sigHash;
-    ofstream fileOut;
+    ofstream fileOut;   // Output stream used to output character information and signature to file
+    string info;        // Info the signature and encryption will take place on
 
     // Opening file
     fileOut.open(filename);
     if (fileOut.is_open()) {
-        // Putting in info
-        string info = getInfo();
+        // Encrypting character information and producing signature
+        info = getInfo();
         fileOut << getSig(info) << endl;
         fileOut << XOR(info);
 
         // Closing file
         fileOut.close();
     }
+    // File was unable to open
     else return false;
 
+    // Save was successful
     return true;
 }
+
+// Load character information from a file
+// Reads in a signature line and encrypted data
+// After decrypting the data, a signature is generated from it
+// If the read and calculated signatures match then the data wasn't tampered
+// If the data was tampered with then returns false
+// Otherwise it sets the character data to what was loaded
+// Returns true if the information was loaded successfully and false otherwise
 bool CharacterInfo::loadInfo() {
     // Init
-    hash<string> sigHash;
-    string line;
-    string ssig;
-    int sig;
-    string info;
-    stringstream ss;
-    ifstream fileIn;
+    // File
+    ifstream fileIn;    // Input stream used to input character information and signature from file
+    string line;        // String taken from file
 
+    // Info
+    stringstream ss;    // Used to combine all the character information
+    string info;        // Unencrypted character information
+    string ssig;        // Signature line
+    int sig;            // Signature line converted to an int    
+    
     // Opening file
     fileIn.open(filename);
     if (fileIn.is_open()) {
-        // Getting info
+        // Getting signature
         getline(fileIn, ssig);
-        bool tmp = true;
+
+        // Getting encrypted character information
+        // If character information has newlines, adds them back in
+        bool firstLine = true;
         while (getline(fileIn, line)) {
-            if (tmp) {
-                ss << line;
-                tmp = false;
+            if (firstLine) {
+                ss << line;             // Getting character info
+                firstLine = false;      // First line is done
             }
-            else {
-                ss << endl << line;
-            }
+            else ss << endl << line;    // Charcter info had a newline, adding it back in
         }
 
         // Closing file
         fileIn.close();
     }
+    // File couldn't be opened
     else return false;
     
-    // decrypt
+    // Decrypting character information
     info = XOR(ss.str());
-    cout << "=== info ===" << endl;
-    cout << info << endl;
+    ss.str("");
+    ss << info;
 
-    // Checking if tampered
+    // Checking if character information was tampered
+    // Generates the hash signature of the character information
+    // If the signature in the file and the compute signature don't match then the info was tampered
     try {
-        sig = stoi(ssig);
+        sig = stoi(ssig);   // Calculating signature from character info
     }
     catch (exception& e) {
-        return false;
+        return false;       // Signature was tampered
     }
+
+    // Checking if Signatures match
+    // If not the data was tampered with
     if (sig != getSig(info)) return false;
 
     // Loading info into character
-    ss.str("");
-    ss << info;
+    // Physique
     getline(ss, name);
     getline(ss, line);
     if (line.compare("MALE") == 0) gender = Gender::MALE;
@@ -128,6 +157,7 @@ bool CharacterInfo::loadInfo() {
     getline(ss, line);
     weight = stod(line);
     getline(ss, hairColor);
+    // Stats
     getline(ss, line);
     maxHP = stoi(line);
     getline(ss, line);
@@ -150,6 +180,7 @@ bool CharacterInfo::loadInfo() {
     attributes[2] = stoi(line);
     getline(ss, line);
     attributes[3] = stoi(line);
+    // Growth
     getline(ss, line);
     level = stoi(line);
     getline(ss, line);
@@ -158,8 +189,10 @@ bool CharacterInfo::loadInfo() {
     XP = stoi(line);
     getline(ss, line);
     attributePts = stoi(line);
+    // States
     getline(ss, line);
     dead = stoi(line);
+    // Inventory
     getline(ss, line);
     sig = stoi(line);   // Number of items
     for (int i = 0; i < sig; i++) {
@@ -172,6 +205,7 @@ bool CharacterInfo::loadInfo() {
     return true;
 }
 
+// Returns the character information as a string seperated by newlines
 string CharacterInfo::getInfo() {
     stringstream ss;
     ss << name << endl
@@ -188,27 +222,41 @@ string CharacterInfo::getInfo() {
 
     return ss.str();
 }
+
+// Returns a hashed value of the given string (signature)
+// Is reproducable between runs
 int CharacterInfo::getSig(string str) {
     // Init
-    hash<string> sighash;
+    hash<string> sighash;   // Hashing function
 
-    // Returning sig
+    // Returning signature
     return sighash(str);
 }
-string CharacterInfo::XOR(string str) {
-    char key[3] = { 'K', 'C', 'Q' };
-    string output = str;
 
+// Returns a encrypted or decrypted string of the given info
+string CharacterInfo::XOR(string str) {
+    // Init
+    char key[3] = { 'K', 'C', 'Q' };    // Key to encrypt/decrypt with
+    string output = str;                // Resulting encrypted/decrypted data
+
+    // Encrypting/decrypting
     for (int i = 0; i < str.size(); i++)
         output[i] = str[i] ^ key[i % (sizeof(key) / sizeof(char))];
 
     return output;
 }
 
-// === Character Events ===
-// Creates a new character and sets default values
+// =========================
+// === Character ===
+// =========================
+
+// Creates a new character with default values
 void CharacterInfo::newCharacter() {
-    newCharacter("Mioriya Wolf", Gender::FEMALE, "Elf", "Mage", DMGType::MAGIC,
+    newCharacter("Mioriya Wolf",
+        Gender::FEMALE,
+        "Elf",  // Race
+        "Mage", // Class
+        DMGType::MAGIC,
         112,    // (~22 Human years)
         165,    // cm (~5.4ft)
         45,     // kg (100 lb)
@@ -220,6 +268,7 @@ void CharacterInfo::newCharacter() {
         1,      // Level
         10);    // Gold
 }
+// Creates a new character with the given values
 void CharacterInfo::newCharacter(string name, Gender gender, string race, string _class, DMGType dmgType,
     int age, double height, double weight, string hairColor,
     int attHP, int attMP, int attSTM, int attDMG, int level, int gold) {
@@ -255,6 +304,7 @@ void CharacterInfo::newCharacter(string name, Gender gender, string race, string
 
 // Levels up the character
 // level+1, attPts+5, glyphPts+1, xp->0, maxXP^
+// Restores HP, MP, STM
 // Returns current level
 int CharacterInfo::levelUp() {
     // Reset XP
@@ -278,12 +328,15 @@ int CharacterInfo::levelUp() {
 // =========================
 
 // Reduce stats and gain rewards based on current level
+// First does damage to enemy, if enemy dies then loots
+// Otherwise recieve damage
 // Returns true if the fight was successful, and false otherwise
 bool CharacterInfo::fight(CharacterInfo& enemy, DMGType type) {
     // Init
     srand(time(NULL));
-    int dmg;
-    int drop = rand() % 100 + 1; // 1-100
+    int dmg;                    // Damage done
+    int cost = 20;              // Cost of doing damage
+    int drop = rand() % 101;    // 0-100
 
     // Checking if enemy or character is dead
     if (enemy.isDead() || isDead()) return false;
@@ -293,16 +346,16 @@ bool CharacterInfo::fight(CharacterInfo& enemy, DMGType type) {
     // Comparing damage types
     if (dmgType == type) dmg = DMG;
     else dmg = DMG / 2;
-    // Checking stats - cost 10 of respective type
+    // Checking stats
     if (type == DMGType::PHYSICAL) {
-        if (STM < 10) dmg /= 4;
-        modSTM(-20);
+        if (STM < cost) dmg /= 4;
+        modSTM(-cost);
     }
     else {  // Magic
-        if (MP < 10) dmg /= 4;
-        modMP(-20);
+        if (MP < cost) dmg /= 4;
+        modMP(-cost);
     }
-    // Attacking
+    // Attacking enemy
     enemy.modHP(-dmg);
 
     // Checking if enemy is dead
@@ -317,22 +370,22 @@ bool CharacterInfo::fight(CharacterInfo& enemy, DMGType type) {
 
         // XP
         modXP(pow(2, enemy.getLevel() - 1) * 10);   // 2^level * 10 (10 enemies @ current level)
-        return true;
+        return true;    // Fight is over
     }
 
     // === Getting attacked ===
     // Calclating dmg
-    // Checking stats (enemy will use it's dmg type, not being optimal)
+    // Checking stats (enemy will use it's dmg type)
     dmg = enemy.getDMG();
     if (enemy.getDMGType() == DMGType::PHYSICAL) {
-        if (enemy.getSTM() < 20) dmg /= 4;
-        enemy.modSTM(-10);
+        if (enemy.getSTM() < cost) dmg /= 4;
+        enemy.modSTM(-cost);
     }
     else {  // Magic
-        if (enemy.getMP() < 20) dmg /= 4;
-        enemy.modMP(-10);
+        if (enemy.getMP() < cost) dmg /= 4;
+        enemy.modMP(-cost);
     }
-    // Attacking
+    // Attacking character
     modHP(-dmg);
     return true;
 }
@@ -390,7 +443,7 @@ bool CharacterInfo::buyAttPts(int gCost) {
 // max HP, max MP, Max STM, or DMG
 // Returns true if point allocation was successful and false otherwise
 bool CharacterInfo::spendAttPt(int att) {
-    // Checking if character has attribute points to spend or is dead
+    // Checking if character has attribute points to spend
     if (attributePts == 0) return false;
 
     // Adding attribute point
@@ -406,7 +459,7 @@ bool CharacterInfo::spendAttPt(int att) {
 // === Utility ===
 // =========================
 
-// Updates stats
+// Updates stats for max HP, MP, STM, and DMG
 void CharacterInfo::updateStats() {
     setHP(attributes[0] * 10, true);
     setMP(attributes[1] * 10, true);
@@ -414,7 +467,7 @@ void CharacterInfo::updateStats() {
     setDMG(attributes[3] * 10);
 }
 
-// Character info string
+// Converts character info into an easily readable string
 string CharacterInfo::toString() {
     // Init
     stringstream ss;
@@ -440,12 +493,10 @@ string CharacterInfo::toString() {
 // =========================
 
 // Setters
+// - Ensures values aren't negative
+// - Returns true if value was valid, and false otherwise
 // Physique
-void CharacterInfo::setName(string name) { this->name = name; }
-void CharacterInfo::setGender(Gender gender) { this->gender = gender; }
-void CharacterInfo::setRace(string race) { this->race = race; }
-void CharacterInfo::setClass(string _class) { this->_class = _class; }
-void CharacterInfo::setDmgType(DMGType type) { dmgType = type; }
+// - Ensures values aren't negative
 bool CharacterInfo::setAge(int age) {
     // Checking if age is negative
     if (age < 0) return false;
@@ -470,8 +521,10 @@ bool CharacterInfo::setWeight(double weight) {
     this->weight = weight;
     return true;
 }
-void CharacterInfo::setHairColor(string color) { hairColor = color; }
 // Stats
+// - Set HP/MP/STM/DMG ignores attributes;
+//   if attributes are updated HP/MP/STM/DMG will reset to proper values
+// - Set HP can cause the character to die
 bool CharacterInfo::setHP(int hp, bool max) {
     // Checking if hp is negative
     if (hp < 0) return false;
@@ -519,6 +572,7 @@ bool CharacterInfo::setDMG(int dmg) {
     DMG = dmg;
     return true;
 }
+// - Attributes are for HP(0), MP(1), STM(2), and DMG(3)
 bool CharacterInfo::setAttribute(int att, int amount) {
     // Checking if attribute is out of range, and if amount is negative
     if (att < 0 || att > 3 || amount < 0) return false;
@@ -529,6 +583,7 @@ bool CharacterInfo::setAttribute(int att, int amount) {
     return true;
 }
 // Growth
+// - Minimum level is 1
 bool CharacterInfo::setLevel(int level) {
     // Checking if level is less than 1
     if (level < 1) return false;
@@ -538,6 +593,7 @@ bool CharacterInfo::setLevel(int level) {
     setXP(pow(2, level-1) * 100, true);
     return true;
 }
+// - If current XP is over maxXP, a levelup occurs
 bool CharacterInfo::setXP(int xp, bool max) {
     // Checking if xp is negative
     if (xp < 0) return false;
@@ -558,8 +614,6 @@ bool CharacterInfo::setAttPts(int pts) {
     attributePts = pts;
     return true;
 }
-// States
-void CharacterInfo::setIsDead(bool dead) { this->dead = dead; }
 // Invetory
 bool CharacterInfo::setGold(int gold) {
     // Checking if gold is negative
@@ -571,7 +625,15 @@ bool CharacterInfo::setGold(int gold) {
 }
 
 // Modifs
+// - Modifies a value by a set amount
+//   Can be positive or negative
+// - Ensures final values aren't negative
+//   If they are, puts them at the minimum values
+// - Returns the final value back
 // Stats
+// - Mod HP/MP/STM/DMG ignores attributes;
+//   if attributes are updated HP/MP/STM/DMG will reset to proper values
+// - Mod HP can cause the character to die
 int CharacterInfo::modHP(int hp, bool max) {
     // Modify max hp, ensures that it isn't negative
     if (max) {
@@ -631,6 +693,7 @@ int CharacterInfo::modDMG(int dmg) {
     if (DMG < 0) DMG = 0;
     return DMG;
 }
+// - Attributes are for HP(0), MP(1), STM(2), and DMG(3)
 int CharacterInfo::modAttribute(int att, int amount) {
     // Checking if attribute is out of range
     if (att < 0 || att > 3) return false;
@@ -644,6 +707,8 @@ int CharacterInfo::modAttribute(int att, int amount) {
     return attributes[att];
 }
 // Growth
+// - Does not chance max or current XP
+// - Max and current XP will go to proper values if a levelup occurs
 int CharacterInfo::modLevel(int level) {
     // Modifying level
     this->level += level;
@@ -652,14 +717,12 @@ int CharacterInfo::modLevel(int level) {
     if (this->level < 1) level = 1;
     return this->level;
 }
+// - If current XP is over maxXP, a levelup occurs
 int CharacterInfo::modXP(int xp, bool max) {
     // Modify max xp, ensures that it isn't negative
     if (max) {
         maxXP += xp;
         if (maxXP < 0) maxXP = 0;
-
-        // Checking if current xp is over max
-        if (XP > maxXP) XP = maxXP;
     }
     // Modify current xp, ensures that it isn't negative
     else {
@@ -678,10 +741,12 @@ int CharacterInfo::modAttPts(int pts) {
     return attributePts;
 }
 // Inventory
+// - Adds an item to the character inventory with the given value
 void CharacterInfo::addItem(int value) {
     Item item(value);
     inventory.push_back(item);
 }
+// - Returns number of items that were cleared
 int CharacterInfo::clearInventory() {
     int size = inventory.size();
     inventory.clear();

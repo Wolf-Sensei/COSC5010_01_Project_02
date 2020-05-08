@@ -26,9 +26,9 @@ public:
     // Constructors
     CharacterInfo(string filename); // Default Constructor
 
-    // Save & Load Info
-    bool saveInfo();
-    bool loadInfo();
+    // Save & Load
+    bool saveInfo();    // Save character info
+    bool loadInfo();    // Load character info
 
     // Character Events
     void newCharacter();    // Sets default character stats
@@ -38,31 +38,31 @@ public:
     int levelUp();          // Leveup character, gain at/gl pts, inc level, reset xp, inc max xp
 
     // Character Actions
-    bool fight(CharacterInfo& enemy, DMGType type);        // Get:items, gold, xp ; Cost: HP, Mana, STM ; Can die
-    bool rest(int gCost); // Restore lost stats, lose gold, gain resting bonus
-    int sellItems();                        // Sell items for gold
+    bool fight(CharacterInfo& enemy, DMGType type); // Get:items, gold, xp ; Cost: HP, Mana, STM ; Can die
+    bool rest(int gCost);   // Fully restore HP, MP & STM, Lose gold
+    int sellItems();        // Sell items for gold
 
     // Character Utility
-    bool buyAttPts(int gCost);      // Upgrade hp,mp,stm,dmg
+    bool buyAttPts(int gCost);      // Buy Attribute point for gold
     bool spendAttPt(int att);       // Increase max HP, MP, STM, or DMG
 
     // Utility
     // Character Info string
-    void updateStats();
-    string toString();
+    void updateStats(); // Update Max HP/MP/STM and DMG based on attributes
+    string toString();  // Convert character info into a easily readable string
 
     // Getters & Setters & modifs
     // Setters
     // Physique
-    void setName(string name);
-    void setGender(Gender gender);
-    void setRace(string race);
-    void setClass(string _class);
-    void setDmgType(DMGType type);
+    void setName(string name) { this->name = name; }
+    void setGender(Gender gender) { this->gender = gender; }
+    void setRace(string race) { this->race = race; }
+    void setClass(string _class) { this->_class = _class; }
+    void setDmgType(DMGType type) { dmgType = type; }
     bool setAge(int age);
     bool setHeight(double height);
     bool setWeight(double weight);
-    void setHairColor(string color);
+    void setHairColor(string color) { hairColor = color; }
     // Stats
     bool setHP(int hp, bool max = false);
     bool setMP(int mp, bool max = false);
@@ -74,7 +74,7 @@ public:
     bool setXP(int xp, bool max = false);
     bool setAttPts(int pts);
     // States
-    void setIsDead(bool dead);
+    void setIsDead(bool dead) { this->dead = dead; }
     // Inventory
     bool setGold(int gold);
 
@@ -123,25 +123,24 @@ public:
     int getGold() { return gold; }
 
 private:
-    string getInfo();
-    int getSig(string str);
-    string XOR(string str);
+    string getInfo();           // Returns character information seperated by lines
+    int getSig(string str);     // Returns a hash-signature of the given string (for info)
+    string XOR(string str);     // Returns the encrypted/decryped version of the given string (for info)
     
     // === Values ===
 private:
-    // === File ===
     string filename;    // File to save data to and load data from
 
     // === Character ===
     // Physique
     string name;
-    Gender gender;
+    Gender gender;      // female or male
     string race;
     string _class;
-    DMGType dmgType;
-    int age;
-    double height;
-    double weight;
+    DMGType dmgType;    // physical or magic
+    int age;            // in years
+    double height;      // in Cm
+    double weight;      // in kg
     string hairColor;
 
     // Stats

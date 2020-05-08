@@ -247,7 +247,7 @@ string CharacterInfo::XOR(string str) {
 }
 
 // =========================
-// === Character ===
+// === Character Events ===
 // =========================
 
 // Creates a new character with default values
@@ -268,6 +268,7 @@ void CharacterInfo::newCharacter() {
         1,      // Level
         10);    // Gold
 }
+
 // Creates a new character with the given values
 void CharacterInfo::newCharacter(string name, Gender gender, string race, string _class, DMGType dmgType,
     int age, double height, double weight, string hairColor,
@@ -496,7 +497,6 @@ string CharacterInfo::toString() {
 // - Ensures values aren't negative
 // - Returns true if value was valid, and false otherwise
 // Physique
-// - Ensures values aren't negative
 bool CharacterInfo::setAge(int age) {
     // Checking if age is negative
     if (age < 0) return false;

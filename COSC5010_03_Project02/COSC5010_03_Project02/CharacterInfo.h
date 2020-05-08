@@ -23,36 +23,101 @@ enum struct DMGType {MAGIC, PHYSICAL};
 class CharacterInfo {
     // === Functions === 
 public:
-    // Constructors
+    // =========================
+    // === Constructors ===
+    // =========================
+
+    // Constructor takes in a filename for where character information is saved and loaded from
+    // Also initalizes the character
     CharacterInfo(string filename); // Default Constructor
 
-    // Save & Load
-    bool saveInfo();    // Save character info
-    bool loadInfo();    // Load character info
+    // =========================
+    // === Save & Load ===
+    // =========================
 
-    // Character Events
-    void newCharacter();    // Sets default character stats
+    // Save character information into a file
+    // Gathers character information and creates a hash-signature of it
+    // Encrypts the character information
+    // Signature and encrypted information are put into the file
+    // Signature is used to ensure that the data cannot be tampered with
+    // Encryption is used to hide character information in file
+    // Returns true if the information was successfully saved and false otherwise
+    bool saveInfo();
+
+    // Load character information from a file
+    // Reads in a signature line and encrypted data
+    // After decrypting the data, a signature is generated from it
+    // If the read and calculated signatures match then the data wasn't tampered
+    // If the data was tampered with then returns false
+    // Otherwise it sets the character data to what was loaded
+    // Returns true if the information was loaded successfully and false otherwise
+    bool loadInfo();
+
+    // =========================
+    // === Character Events ===
+    // =========================
+
+    void newCharacter();    // Creates a new character with default values
+
+    // Creates a new character with the given values
     void newCharacter(string name, Gender gender, string race, string _class, DMGType dmgType,
         int age, double height, double weight, string hairColor,
         int attHP, int attMP, int attSTM, int attDMG, int level, int gold);
-    int levelUp();          // Leveup character, gain at/gl pts, inc level, reset xp, inc max xp
 
-    // Character Actions
-    bool fight(CharacterInfo& enemy, DMGType type); // Get:items, gold, xp ; Cost: HP, Mana, STM ; Can die
-    bool rest(int gCost);   // Fully restore HP, MP & STM, Lose gold
-    int sellItems();        // Sell items for gold
+    // Levels up the character
+    // level+1, attPts+5, glyphPts+1, xp->0, maxXP^
+    // Restores HP, MP, STM
+    // Returns current level
+    int levelUp();
 
-    // Character Utility
-    bool buyAttPts(int gCost);      // Buy Attribute point for gold
-    bool spendAttPt(int att);       // Increase max HP, MP, STM, or DMG
+    // =========================
+    // === Character Actions ===
+    // =========================
 
-    // Utility
-    // Character Info string
-    void updateStats(); // Update Max HP/MP/STM and DMG based on attributes
-    string toString();  // Convert character info into a easily readable string
+    // Reduce stats and gain rewards based on current level
+    // First does damage to enemy, if enemy dies then loots
+    // Otherwise recieve damage
+    // Returns true if the fight was successful, and false otherwise
+    bool fight(CharacterInfo& enemy, DMGType type);
 
-    // Getters & Setters & modifs
+    // The character rests at an Inn.
+    // The inn costs gold to rest at.
+    // Character HP, MP, and STM are fully restored
+    // Returns true if resting was successful and false otherwise
+    bool rest(int gCost);
+
+    // Sells all items in the characters inventory.
+    // The value of all the items is put into the characters gold supply
+    // Returns the amount of gold gained
+    int sellItems();
+
+    // =========================
+    // === Character Utility ===
+    // =========================
+
+    // Buys an attribute pt for the character
+    // Returns true if the purchase was successful and false otherwise
+    bool buyAttPts(int gCost);
+
+    // Increase a character attribute and increase
+    // max HP, max MP, Max STM, or DMG
+    // Returns true if point allocation was successful and false otherwise
+    bool spendAttPt(int att);
+
+    // =========================
+    // === Utility ===
+    // =========================
+
+    void updateStats(); // Updates stats for max HP, MP, STM, and DMG
+    string toString();  // Converts character info into an easily readable string
+
+    // =========================
+    // === Getters & Setters & Modifs ===
+    // =========================
+
     // Setters
+    // - Ensures values aren't negative
+    // - Returns true if value was valid, and false otherwise
     // Physique
     void setName(string name) { this->name = name; }
     void setGender(Gender gender) { this->gender = gender; }
@@ -64,13 +129,19 @@ public:
     bool setWeight(double weight);
     void setHairColor(string color) { hairColor = color; }
     // Stats
+    // - Set HP/MP/STM/DMG ignores attributes;
+    //   if attributes are updated HP/MP/STM/DMG will reset to proper values
+    // - Set HP can cause the character to die
     bool setHP(int hp, bool max = false);
     bool setMP(int mp, bool max = false);
     bool setSTM(int stm, bool max = false);
     bool setDMG(int dmg);
+    // - Attributes are for HP(0), MP(1), STM(2), and DMG(3)
     bool setAttribute(int att, int addition);
     // Growth
+    // - Minimum level is 1
     bool setLevel(int level);
+    // - If current XP is over maxXP, a levelup occurs
     bool setXP(int xp, bool max = false);
     bool setAttPts(int pts);
     // States
@@ -78,19 +149,33 @@ public:
     // Inventory
     bool setGold(int gold);
 
-    // Modify stat by +- amount
+    // Modifs
+    // - Modifies a value by a set amount
+    //   Can be positive or negative
+    // - Ensures final values aren't negative
+    //   If they are, puts them at the minimum values
+    // - Returns the final value back
     // Stats
+    // - Mod HP/MP/STM/DMG ignores attributes;
+    //   if attributes are updated HP/MP/STM/DMG will reset to proper values
+    // - Mod HP can cause the character to die
     int modHP(int hp, bool max = false);
     int modMP(int mp, bool max = false);
     int modSTM(int stm, bool max = false);
     int modDMG(int dmg);
+    // - Attributes are for HP(0), MP(1), STM(2), and DMG(3)
     int modAttribute(int att, int amount);
     // Growth
+    // - Does not chance max or current XP
+    // - Max and current XP will go to proper values if a levelup occurs
     int modLevel(int level);
+    // - If current XP is over maxXP, a levelup occurs
     int modXP(int xp, bool max = false);
     int modAttPts(int pts);
     // Inventory
+    // - Adds an item to the character inventory with the given value
     void addItem(int value);
+    // - Returns number of items that were cleared
     int clearInventory();
     int modGold(int gold);
 
@@ -123,20 +208,32 @@ public:
     int getGold() { return gold; }
 
 private:
-    string getInfo();           // Returns character information seperated by lines
-    int getSig(string str);     // Returns a hash-signature of the given string (for info)
-    string XOR(string str);     // Returns the encrypted/decryped version of the given string (for info)
-    
+    // =========================
+    // === Save & Load ===
+    // =========================
+
+    // Returns the character information as a string seperated by newlines
+    string getInfo();
+
+    // Returns a hashed value of the given string (signature)
+    // Is reproducable between runs
+    int getSig(string str);
+
+    // Returns a encrypted or decrypted string of the given info
+    string XOR(string str);
+
+    // =========================
     // === Values ===
-private:
+    // =========================
+
     string filename;    // File to save data to and load data from
 
     // === Character ===
     // Physique
     string name;
     Gender gender;      // female or male
-    string race;
-    string _class;
+    string race;        // Human, Dwarf, Demon, Beast, etc
+    string _class;      // Warrier, THief, Mage, etc
     DMGType dmgType;    // physical or magic
     int age;            // in years
     double height;      // in Cm
@@ -159,7 +256,7 @@ private:
     bool dead;          // Whether the character is dead or not
 
     // Inventory
-    vector<Item> inventory;
+    vector<Item> inventory; // Inventory containing tiems (items only hold a gold value)
     int gold;
 };
 

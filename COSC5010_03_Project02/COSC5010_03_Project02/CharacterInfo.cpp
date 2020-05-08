@@ -293,6 +293,7 @@ void CharacterInfo::newCharacter(string name, Gender gender, string race, string
     setMP(maxMP);
     setSTM(maxSTM);
     // Growth
+    XP = 0;
     setLevel(level);
     setXP(0);
     setAttPts(0);
@@ -308,11 +309,8 @@ void CharacterInfo::newCharacter(string name, Gender gender, string race, string
 // Restores HP, MP, STM
 // Returns current level
 int CharacterInfo::levelUp() {
-    // Reset XP
+    // Growth
     modXP(-maxXP);
-    setXP(pow(2, level) * 100, true);    // starting at 100, double needed xp based on level
-
-    // Gain pts
     modLevel(1);
     modAttPts(5);
 
@@ -337,7 +335,6 @@ bool CharacterInfo::fight(CharacterInfo& enemy, DMGType type) {
     srand(time(NULL));
     int dmg;                    // Damage done
     int cost = 20;              // Cost of doing damage
-    int drop = rand() % 101;    // 0-100
 
     // Checking if enemy or character is dead
     if (enemy.isDead() || isDead()) return false;
@@ -363,10 +360,8 @@ bool CharacterInfo::fight(CharacterInfo& enemy, DMGType type) {
     if (enemy.isDead()) {
         // Looting enemy
         modGold(enemy.getGold());
-        // Chance of item 10%
-        if (drop <= 10) {
-            drop = rand() % 10 + 1;  // 1-10 value
-            addItem(drop);
+        for (Item item : enemy.getInventory()) {
+            addItem(item.getValue());
         }
 
         // XP
@@ -584,6 +579,7 @@ bool CharacterInfo::setAttribute(int att, int amount) {
 }
 // Growth
 // - Minimum level is 1
+// - Sets maximum XP
 bool CharacterInfo::setLevel(int level) {
     // Checking if level is less than 1
     if (level < 1) return false;
@@ -708,13 +704,14 @@ int CharacterInfo::modAttribute(int att, int amount) {
 }
 // Growth
 // - Does not chance max or current XP
-// - Max and current XP will go to proper values if a levelup occurs
+// - Sets maximum XP
 int CharacterInfo::modLevel(int level) {
     // Modifying level
     this->level += level;
 
     // Checking if level is less than 1
-    if (this->level < 1) level = 1;
+    if (this->level < 1) this->level = 1;
+    setXP(pow(2, this->level - 1) * 100, true);
     return this->level;
 }
 // - If current XP is over maxXP, a levelup occurs

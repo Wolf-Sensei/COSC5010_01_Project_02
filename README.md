@@ -1,6 +1,7 @@
 # COSC5010_01_Project_02
 
-A program that allows a user to play as a hero and fight monsters.
+A program that allows a user to play as a hero and fight monsters.  
+Contains source code and documents for design and analysis.
 
 ## Requirements
 
